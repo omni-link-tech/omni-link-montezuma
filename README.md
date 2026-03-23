@@ -111,11 +111,4 @@ The core architecture matches the OmniLink suite (Tetris, Breakout, etc.):
 | `montezuma_link/montezuma_engine.py` | AI controller — BFS pathfinding, enemy avoidance |
 | `montezuma_link/montezuma_api.py` | HTTP client for polling state and sending actions |
 | `montezuma.py` | Pygame game engine — maze, enemies, rendering |
-| `server_wrapper.py` | HTTP + MQTT bridge wrapping the Pygame game |
-
-### Legacy TypeScript Agents
-
-| File | Description |
-|---|---|
-| `agent.ts` | Basic BFS agent (direct HTTP, no OmniLink) |
-| `advanced_agent.ts` | Enhanced agent with enemy radius avoidance |
+| `server_wrapper.py` | HTTP + MQTT bridge wrapping the Pygame game ||
