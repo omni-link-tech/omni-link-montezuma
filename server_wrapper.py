@@ -220,16 +220,37 @@ class MontezumaAPIHandler(BaseHTTPRequestHandler):
             action = data.get("action")
             actions = data.get("actions")
             
-            allowed = ("UP", "DOWN", "LEFT", "RIGHT", "STOP")
+            movement = ("UP", "DOWN", "LEFT", "RIGHT", "STOP")
+            control  = ("START", "RESUME", "PAUSE")
+
+            def _handle_action(act_str: str):
+                if act_str in movement:
+                    _GAME.pending_actions.append(act_str)
+                elif act_str == "START":
+                    if _GAME.state in ("TITLE", "GAMEOVER", "WIN"):
+                        _GAME.reset_game()
+                        _GAME.state = "PLAY"
+                        _GAME.start_ticks = pygame.time.get_ticks()
+                        print(f"[HTTP] Game started via API")
+                elif act_str == "RESUME":
+                    if _GAME.state == "PAUSE":
+                        _GAME.toggle_pause()
+                        print(f"[HTTP] Game resumed via API")
+                    elif _GAME.state in ("TITLE", "GAMEOVER", "WIN"):
+                        _GAME.reset_game()
+                        _GAME.state = "PLAY"
+                        _GAME.start_ticks = pygame.time.get_ticks()
+                        print(f"[HTTP] Game started (via RESUME) via API")
+                elif act_str == "PAUSE":
+                    if _GAME.state == "PLAY":
+                        _GAME.toggle_pause()
+                        print(f"[HTTP] Game paused via API")
+
             if isinstance(actions, list) and len(actions) > 0 and _GAME:
                 for act in actions:
-                    act_str = str(act).upper()
-                    if act_str in allowed:
-                        _GAME.pending_actions.append(act_str)
+                    _handle_action(str(act).upper())
             elif action and isinstance(action, str) and _GAME:
-                act_str = action.upper()
-                if act_str in allowed:
-                    _GAME.pending_actions.append(act_str)
+                _handle_action(action.upper())
         except Exception as e:
             print(f"[HTTP] /callback parse error: {e}")
 

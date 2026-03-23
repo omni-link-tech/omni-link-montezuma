@@ -19,9 +19,11 @@ YELLOW = (255, 255, 0)
 GREEN = (0, 255, 0)
 CYAN = (0, 255, 255)
 ORANGE = (255, 165, 0)
-EMPTY_COLOR = (82, 82, 82)
-GRID_COLOR = (51, 51, 51)
-WALL_COLOR = (27, 27, 27)
+EMPTY_COLOR = (30, 30, 45)
+GRID_COLOR = (25, 25, 38)
+WALL_COLOR = (15, 15, 25)
+WALL_HI = (22, 22, 35)
+WALL_SH = (8, 8, 15)
 
 # Maze Tiles
 EMPTY = 0
@@ -231,66 +233,142 @@ class Montezuma:
 
     def draw(self):
         self.game_surface.fill(EMPTY_COLOR)
-        
-        # Maze Walls & Grid
+
+        # Maze Walls & Grid with 3D effect
         for r in range(ROWS):
             for c in range(COLS):
-                rect = (c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                rect = (c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 if self.maze[r][c] == WALL:
                     pygame.draw.rect(self.game_surface, WALL_COLOR, rect)
+                    # Top/left highlight
+                    pygame.draw.line(self.game_surface, WALL_HI,
+                                     (rect[0], rect[1]), (rect[0] + TILE_SIZE - 1, rect[1]))
+                    pygame.draw.line(self.game_surface, WALL_HI,
+                                     (rect[0], rect[1]), (rect[0], rect[1] + TILE_SIZE - 1))
+                    # Bottom/right shadow
+                    pygame.draw.line(self.game_surface, WALL_SH,
+                                     (rect[0], rect[1] + TILE_SIZE - 1),
+                                     (rect[0] + TILE_SIZE - 1, rect[1] + TILE_SIZE - 1))
+                    pygame.draw.line(self.game_surface, WALL_SH,
+                                     (rect[0] + TILE_SIZE - 1, rect[1]),
+                                     (rect[0] + TILE_SIZE - 1, rect[1] + TILE_SIZE - 1))
                 else:
                     pygame.draw.rect(self.game_surface, GRID_COLOR, rect, 1)
-                    
-        # Door
-        pygame.draw.rect(self.game_surface, ORANGE, (self.door_x*TILE_SIZE, self.door_y*TILE_SIZE, TILE_SIZE, TILE_SIZE))
-        
-        # Key
-        if not self.has_key:
-            pygame.draw.rect(self.game_surface, YELLOW, (self.key_x*TILE_SIZE, self.key_y*TILE_SIZE, TILE_SIZE, TILE_SIZE))
-            
-        # Enemies
-        for e in self.enemies:
-            pygame.draw.rect(self.game_surface, RED, (e["x"]*TILE_SIZE, e["y"]*TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
-        # Player
-        pygame.draw.rect(self.game_surface, CYAN, (self.player_x*TILE_SIZE, self.player_y*TILE_SIZE, TILE_SIZE, TILE_SIZE))
-        
+        # Door with glow
+        dx, dy = self.door_x * TILE_SIZE, self.door_y * TILE_SIZE
+        glow = pygame.Surface((TILE_SIZE + 8, TILE_SIZE + 8), pygame.SRCALPHA)
+        pygame.draw.rect(glow, (255, 165, 0, 40), (0, 0, TILE_SIZE + 8, TILE_SIZE + 8), border_radius=4)
+        self.game_surface.blit(glow, (dx - 4, dy - 4))
+        pygame.draw.rect(self.game_surface, ORANGE, (dx + 2, dy + 2, TILE_SIZE - 4, TILE_SIZE - 4), border_radius=4)
+        # Door arch
+        pygame.draw.rect(self.game_surface, (255, 200, 80), (dx + 2, dy + 2, TILE_SIZE - 4, 4), border_radius=2)
+        # Keyhole indicator
+        if not self.has_key:
+            pygame.draw.circle(self.game_surface, (180, 100, 0),
+                               (dx + TILE_SIZE // 2, dy + TILE_SIZE // 2 + 4), 3)
+
+        # Key with glow and shape
+        if not self.has_key:
+            kx, ky = self.key_x * TILE_SIZE, self.key_y * TILE_SIZE
+            glow = pygame.Surface((TILE_SIZE + 8, TILE_SIZE + 8), pygame.SRCALPHA)
+            pygame.draw.rect(glow, (255, 255, 0, 50), (0, 0, TILE_SIZE + 8, TILE_SIZE + 8), border_radius=6)
+            self.game_surface.blit(glow, (kx - 4, ky - 4))
+            # Key shape: circle head + rectangle shaft
+            pygame.draw.circle(self.game_surface, YELLOW,
+                               (kx + TILE_SIZE // 2, ky + TILE_SIZE // 3), 7)
+            pygame.draw.circle(self.game_surface, (180, 180, 0),
+                               (kx + TILE_SIZE // 2, ky + TILE_SIZE // 3), 4)
+            pygame.draw.rect(self.game_surface, YELLOW,
+                             (kx + TILE_SIZE // 2 - 2, ky + TILE_SIZE // 3, 4, TILE_SIZE // 2))
+            # Key teeth
+            pygame.draw.rect(self.game_surface, YELLOW,
+                             (kx + TILE_SIZE // 2, ky + TILE_SIZE * 2 // 3, 5, 3))
+
+        # Enemies with better sprite
+        for e in self.enemies:
+            ex, ey = e["x"] * TILE_SIZE, e["y"] * TILE_SIZE
+            # Body
+            pygame.draw.rect(self.game_surface, RED,
+                             (ex + 3, ey + 4, TILE_SIZE - 6, TILE_SIZE - 6), border_radius=4)
+            # Eyes
+            pygame.draw.circle(self.game_surface, WHITE, (ex + 10, ey + 11), 4)
+            pygame.draw.circle(self.game_surface, WHITE, (ex + 22, ey + 11), 4)
+            pygame.draw.circle(self.game_surface, BLACK, (ex + 11, ey + 12), 2)
+            pygame.draw.circle(self.game_surface, BLACK, (ex + 23, ey + 12), 2)
+            # Jagged bottom edge
+            for i in range(3):
+                bx = ex + 5 + i * 8
+                by = ey + TILE_SIZE - 4
+                pygame.draw.polygon(self.game_surface, RED,
+                                    [(bx, by - 2), (bx + 4, by + 3), (bx + 8, by - 2)])
+
+        # Player with better sprite
+        px, py = self.player_x * TILE_SIZE, self.player_y * TILE_SIZE
+        # Body
+        pygame.draw.rect(self.game_surface, CYAN,
+                         (px + 4, py + 6, TILE_SIZE - 8, TILE_SIZE - 8), border_radius=6)
+        # Head
+        pygame.draw.circle(self.game_surface, CYAN, (px + TILE_SIZE // 2, py + 8), 7)
+        # Highlight
+        pygame.draw.circle(self.game_surface, (100, 255, 255),
+                           (px + TILE_SIZE // 2 - 2, py + 6), 3)
+        # Key indicator on player
+        if self.has_key:
+            pygame.draw.circle(self.game_surface, YELLOW,
+                               (px + TILE_SIZE - 6, py + 4), 4)
+
         # UI overlays
         if self.state == "TITLE":
-            # Just dim
-            s = pygame.Surface((WIDTH,HEIGHT))
-            s.set_alpha(128)
-            s.fill((0,0,0))
-            self.game_surface.blit(s, (0,0))
-            t = self.font_small.render("PRESS SPACE TO START", True, WHITE)
-            self.game_surface.blit(t, (WIDTH//2 - t.get_width()//2, HEIGHT//2))
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0, 0, 0, 160))
+            self.game_surface.blit(s, (0, 0))
+            t = self.font_large.render("MONTEZUMA", True, ORANGE)
+            self.game_surface.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2 - 60))
+            t2 = self.font_small.render("PRESS SPACE TO START", True, WHITE)
+            self.game_surface.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2 + 20))
         elif self.state == "GAMEOVER":
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0, 0, 0, 160))
+            self.game_surface.blit(s, (0, 0))
             t = self.font_large.render("GAME OVER", True, RED)
-            self.game_surface.blit(t, (WIDTH//2 - t.get_width()//2, HEIGHT//2 - 50))
-            t2 = self.font_small.render("PRESS SPACE TO RESTART", True, WHITE)
-            self.game_surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2 + 50))
+            self.game_surface.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2 - 50))
+            t2 = self.font_small.render(f"Score: {self.score}", True, WHITE)
+            self.game_surface.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2 + 20))
+            t3 = self.font_small.render("PRESS SPACE TO RESTART", True, (160, 160, 160))
+            self.game_surface.blit(t3, (WIDTH // 2 - t3.get_width() // 2, HEIGHT // 2 + 60))
         elif self.state == "WIN":
-            t = self.font_large.render("YOU WIN", True, YELLOW)
-            self.game_surface.blit(t, (WIDTH//2 - t.get_width()//2, HEIGHT//2 - 50))
-            t2 = self.font_small.render("PRESS SPACE TO RESTART", True, WHITE)
-            self.game_surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2 + 50))
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0, 0, 20, 160))
+            self.game_surface.blit(s, (0, 0))
+            t = self.font_large.render("YOU WIN!", True, YELLOW)
+            self.game_surface.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2 - 50))
+            t2 = self.font_small.render(f"Score: {self.score}  Level: {self.level}", True, WHITE)
+            self.game_surface.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2 + 20))
+            t3 = self.font_small.render("PRESS SPACE TO RESTART", True, (160, 160, 160))
+            self.game_surface.blit(t3, (WIDTH // 2 - t3.get_width() // 2, HEIGHT // 2 + 60))
         elif self.state == "PAUSE":
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0, 0, 0, 160))
+            self.game_surface.blit(s, (0, 0))
             t = self.font_large.render("PAUSED", True, YELLOW)
-            self.game_surface.blit(t, (WIDTH//2 - t.get_width()//2, HEIGHT//2))
+            self.game_surface.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2))
 
-        # UI Score / Lives
+        # HUD bar at top
+        hud_bg = pygame.Surface((WIDTH, 42), pygame.SRCALPHA)
+        hud_bg.fill((0, 0, 0, 140))
+        self.game_surface.blit(hud_bg, (0, 0))
         hearts = "\u2665 " * max(self.lives, 0)
         hud_text = self.font_small.render(
             f"Level: {self.level}   Score: {self.score}   {hearts}Lives: {self.lives}",
             True, WHITE
         )
-        self.game_surface.blit(hud_text, (10, 10))
+        self.game_surface.blit(hud_text, (10, 6))
 
         # Red flash overlay on life loss
         if getattr(self, "_flash_frames", 0) > 0:
-            flash = pygame.Surface((WIDTH, HEIGHT))
-            flash.set_alpha(120)
-            flash.fill((220, 0, 0))
+            flash = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            flash.fill((220, 0, 0, 100))
             self.game_surface.blit(flash, (0, 0))
             self._flash_frames -= 1
 
@@ -305,7 +383,7 @@ class Montezuma:
             new_h = int(new_w / aspect_ratio)
 
         scaled_surface = pygame.transform.scale(self.game_surface, (new_w, new_h))
-        self.screen.fill(BLACK)
+        self.screen.fill((0, 0, 0))
         self.screen.blit(scaled_surface, ((current_w - new_w) // 2, (current_h - new_h) // 2))
 
         pygame.display.flip()
